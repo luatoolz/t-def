@@ -8,6 +8,7 @@ local json=require "t.format.json"
 
 return t.object({
 __call=function(self, it)
+  it=it or {}
   if type(it)=='string' then it=json.decode(it) end
   if type(it)~='table' then return nil end
   local fields = mt(self).__imports or {}
