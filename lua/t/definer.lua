@@ -1,10 +1,11 @@
 local t = t or require "t"
---local meta = require "meta"
 local is = t.is
---require"t.is"
 local mt = require "meta.mt"
 local json=require "t.format.json"
---local inspect = require 'inspect'
+--local bson=require "t.format.bson"
+
+local inspect = require "inspect"
+local no = require "meta.no"
 
 return t.object({
 __call=function(self, it)
@@ -14,7 +15,14 @@ __call=function(self, it)
   local fields = mt(self).__imports or {}
   for k,v in pairs(fields) do
     local q=it[k]
-    if type(q)~='nil' and is.callable(v) then it[k]=v(q) end
+    if type(q)~='nil' and is.callable(v) then
+      it[k]=no.assert(v(q))
+    end
+  end
+  local required=mt(self).__required or {}
+  local default =mt(self).__default or {}
+  for _,k in pairs(required) do
+    if type(it[k])=='nil' then it[k]=default[k] or fields[k]() end
   end
   setmetatable(it, getmetatable(self))
   return toboolean(it) and it or nil
@@ -25,13 +33,14 @@ __mod=function(self, it) -- build query
 -- TODO: use every field
   return it and {[(id or {})[1]]=it} or nil
 end,
+__pairs=function(self) return next, self, nil end,
 __toboolean=function(self) -- validate
   local required = mt(self).__required
-  if not required then return true end
+  if type(required)=='nil' then return true end
+  if type(required)~='table' then return false end
   for _,it in pairs(required) do
-    if not self[it] then return false end
+    if type(it)~='string' or it=='' or type(self[it])=='nil' then return false end
   end
   return true
 end,
---__toJSON=function(self)  end,
 }):definer()

@@ -35,4 +35,8 @@ describe("objects", function()
 
     assert.is_table(mt(i))
   end)
+  it("null", function()
+    assert.is_table(def.noneexistent)
+    assert.equal("y", def.noneexistent('{"x":"y"}').x)
+  end)
 end)
