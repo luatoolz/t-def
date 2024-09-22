@@ -3,7 +3,7 @@ local job=t.def.job
 
 return setmetatable({
   type=t.string,
-  id=t.string,
+  id=t.match.md5,
   host=t.string,
   userid=t.number,
   _=[[id]],

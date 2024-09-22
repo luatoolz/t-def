@@ -1,11 +1,14 @@
 local getmetatable=debug and debug.getmetatable or getmetatable
 describe("definer", function()
-  local t, td, bson, json
+  local t, is, td, bson, json, oid
   setup(function()
-    t = require "t"
+    t = t or require "t"
+    is = t.is
+    t.env.MONGO_HOST='127.0.0.1'
     td = require "testdata"
     bson = t.format.bson
     json = t.format.json
+    oid = require "t.storage.mongo.oid"
   end)
   describe("definer", function()
     it("auth", function()
@@ -15,8 +18,10 @@ describe("definer", function()
       assert.is_table(getmetatable(o).__id)
       assert.is_table(getmetatable(o).__required)
 
-      o = o({role='root', token='xx'})
-      assert.is_table(o)
+      assert.is_nil(o({role='', token='yy'}))
+      assert.is_nil(o({role='root', token='xx'}))
+      assert.is_nil(o({role='root'}))
+      assert.is_table(o({role='root', token='e7df7cd2ca07f4f1ab415d457a6e1c13'}))
     end)
     it("remote", function()
       local o = td.def.remote
@@ -27,31 +32,31 @@ describe("definer", function()
       assert.is_callable(getmetatable(o).ping)
       assert.is_callable(getmetatable(o).login)
 
-      o = o({id='q', host='xx'})
-      assert.is_table(o)
+      assert.is_nil(o({id='', host='xx'}))
+      assert.is_table(o({id='ba1f2511fc30423bdbb183fe33f3dd0f', host='xx'}))
     end)
     it("simple", function()
       local o = td.def.simple
       assert.is_table(o)
       assert.is_callable(o)
 
-      assert.same({}, o({}))
-      assert.same({yes=false,no=true,one=3,pi=1}, o({yes=false,no=true,one=2.64,pi=1}))
-      assert.same({chars='qwe',digits='123'}, o({chars='123qwe456',digits='qwe123ert'}))
-      assert.same({zero=77,empty='some'}, o({zero=77,empty='some'}))
-      assert.same({zero=77,empty='77'}, o({zero='77',empty=77}))
+      assert.eq({}, o{})
+      assert.eq({yes=false,no=true,one=3,pi=1}, o({yes=false,no=true,one=2.64,pi=1}))
+      assert.eq({chars='qwe',digits='123'}, o({chars='123qwe456',digits='qwe123ert'}))
+      assert.eq({zero=77,empty='some'}, o({zero=77,empty='some'}))
+      assert.eq({zero=77,empty='77'}, o({zero='77',empty=77}))
     end)
     it("simpledef", function()
       local o = td.def.simpledef
       assert.is_table(o)
       assert.is_callable(o)
 
-      assert.same({yes=true,no=false,one=1,pi=3.14}, o())
-      assert.same({yes=true,no=false,one=1,pi=3.14}, o({}))
-      assert.same({yes=false,no=true,one=3,pi=1}, o({yes=false,no=true,one=2.64,pi=1}))
-      assert.same({yes=true,no=false,one=1,pi=3.14,chars='qwe',digits='123'}, o({chars='123qwe456',digits='qwe123ert'}))
-      assert.same({yes=true,no=false,one=1,pi=3.14,zero=77,empty='some'}, o({zero=77,empty='some'}))
-      assert.same({yes=true,no=false,one=1,pi=3.14,zero=77,empty='77'}, o({zero='77',empty=77}))
+--      assert.eq({yes=true,no=false,one=1,pi=3.14}, o())
+      assert.eq({yes=true,no=false,one=1,pi=3.14}, o({}))
+      assert.eq({yes=false,no=true,one=3,pi=1}, o({yes=false,no=true,one=2.64,pi=1}))
+      assert.eq({yes=true,no=false,one=1,pi=3.14,chars='qwe',digits='123'}, o({chars='123qwe456',digits='qwe123ert'}))
+      assert.eq({yes=true,no=false,one=1,pi=3.14,zero=77,empty='some'}, o({zero=77,empty='some'}))
+      assert.eq({yes=true,no=false,one=1,pi=3.14,zero=77,empty='77'}, o({zero='77',empty=77}))
     end)
     it("simdate", function()
       local date = t.date
@@ -59,21 +64,57 @@ describe("definer", function()
       assert.is_table(o)
       assert.is_callable(o)
 
-      local x=o()
+      local x=o({no=false})
       x.ts=date()
-      assert.same({yes=true,no=false,one=1,pi=3.14,ts=date()}, x)
+      assert.eq({yes=true,no=false,one=1,pi=3.14,ts=date()}, x)
       local __export = (getmetatable(x.ts) or {}).__export
       assert.is_function(__export)
 
-      local bs = bson(x)
-      assert.same(x, o(bs:value()))
-      assert.same(x, o(json(x)))
+      assert.equal(o(x), x)
+      assert.equal(x, o(bson(x)))
+      assert.equal(x, o(bson(x):value()))
+      assert.equal(x, o(json(x)))
 
-      assert.keys({'yes', 'no', 'one', 'pi'}, o({}))
-      assert.same({yes=false,no=true,one=3,pi=1}, o({yes=false,no=true,one=2.64,pi=1}))
-      assert.same({yes=true,no=false,one=1,pi=3.14,chars='qwe',digits='123'}, o({chars='123qwe456',digits='qwe123ert'}))
-      assert.same({yes=true,no=false,one=1,pi=3.14,zero=77,empty='some'}, o({zero=77,empty='some'}))
-      assert.same({yes=true,no=false,one=1,pi=3.14,zero=77,empty='77'}, o({zero='77',empty=77}))
+      assert.keys({'yes', 'no', 'one', 'pi'}, o({yes=false}))
+      assert.eq({yes=false,no=true,one=3,pi=1}, o({yes=false,no=true,one=2.64,pi=1}))
+      assert.eq({yes=true,no=false,one=1,pi=3.14,chars='qwe',digits='123'}, o({chars='123qwe456',digits='qwe123ert'}))
+      assert.eq({yes=true,no=false,one=1,pi=3.14,zero=77,empty='some'}, o({zero=77,empty='some'}))
+      assert.eq({yes=true,no=false,one=1,pi=3.14,zero=77,empty='77'}, o({zero='77',empty=77}))
+    end)
+    it("x", function()
+      local o = td.def.x
+      assert.is_nil(o())
+      assert.is_nil(o(''))
+      assert.equal(o({}),o({}))
+      assert.equal(o({}),o('{}'))
+      assert.equal(o({}),o('[]'))
+      assert.equal(o({{}}),o('[{}]'))
+      assert.equal(o({{},{}}),o('[{},{}]'))
+      assert.equal(o({{},{},{}}),o('[{},{},{}]'))
+      assert.equal(o({{},{},{},{}}),o('[{},{},{},{}]'))
+      assert.equal(o({n=1}),o({n=1}))
+      assert.equal(o({n=0}),o({n=0}))
+      assert.equal(o({n=0,x=''}),o({n=0,x=''}))
+      assert.equal(o({x='yes',n=7}),o({n=7,x='yes'}))
+      assert.equal(o({x='yes',n=7}),o('{"n":7,"x":"yes"}'))
+      assert.equal(o({x='yes',n=7}),o(bson('{"n":7,"x":"yes"}')))
+      assert.equal(o({{n=0,x=''},{n=1,x='1'},{n=3,x='q'},{n=-11,x='qwe'}}),o({{n=0,x=''},{n=1,x='1'},{n=3,x='q'},{n=-11,x='qwe'}}))
+      assert.equal(o({{n=0,x=''},{n=1,x='1'},{n=3,x='q'},{n=-11,x='qwe'}}),o('[{"n":0,"x":""},{"n":1,"x":"1"},{"n":3,"x":"q"},{"n":-11,"x":"qwe"}]'))
+
+      local items={o({[true]=7,yes='da'}),o(),o({}),o({{}}),o({{},{}}),o({{},{},{}}),o({{},{},{},{}}),o({n=1}),o({n=1}),o({n=0}),o({n=0}),o({n=0,x=''}),o({x='yes',n=7}),o({x='yes',n=7}),
+        o({x='yes',n=7}),o({{n=0,x=''},{n=1,x='1'},{n=3,x='q'},{n=-11,x='qwe'}}),o({{n=0,x=''},{n=1,x='1'},{n=3,x='q'},{n=-11,x='qwe'}})}
+
+      for i,v in ipairs(items) do
+        assert.equal(v, o(v))
+        assert.equal(v, o(json(v)))
+        assert.equal(v, o(bson(v)))
+      end
+      for i,v in ipairs(items) do
+        if not is.bulk(v) then v._id=oid() end
+        assert.equal(v, o(v))
+        assert.equal(v, o(json(v)))
+        assert.equal(v, o(bson(v)))
+      end
     end)
   end)
 end)

@@ -22,6 +22,7 @@ dependencies = {
   "t",
   "t-format-json",
   "t-format-bson",
+  "t-storage-mongo",
 }
 
 test_dependencies = {
