@@ -1,0 +1,1 @@
+return {1, "expected to be def: %s", "expected to be not def: %s"}
