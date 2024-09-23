@@ -1,1 +1,0 @@
-return {1, "expected to be defroot: %s", "expected to be not defroot: %s"}
