@@ -1,9 +1,7 @@
-local t = t or require "t"
-
 return {
-  done=t.boolean,
-  ok=t.boolean,
-  message=t.string,
-  created=t.integer,
-  finished=t.integer,
+  done=false,
+  ok=false,
+  message='',
+  created=0,
+  finished=0,
 }

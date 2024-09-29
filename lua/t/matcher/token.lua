@@ -1,1 +1,2 @@
-return '[a-zA-Z0-9]+'
+local t=t or require "t"
+return t.matcher.x64

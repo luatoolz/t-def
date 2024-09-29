@@ -1,6 +1,6 @@
 return {
   token='%x+',
-  role='',
+  role='%w+',
   _=[[token]],
   [true]=[[token role]],
 }

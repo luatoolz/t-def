@@ -1,11 +1,12 @@
 local getmetatable=debug and debug.getmetatable or getmetatable
 describe("definer", function()
-  local t, is, td, bson, json, oid
+  local t, is, bson, json, oid, td
   setup(function()
     t = t or require "t"
-    is = t.is
+    is = t.is ^ 'testdata'
     t.env.MONGO_HOST='127.0.0.1'
     td = require "testdata"
+    _ = t.storage.mongo ^ td.def
     bson = t.format.bson
     json = t.format.json
     oid = require "t.storage.mongo.oid"
@@ -22,6 +23,11 @@ describe("definer", function()
       assert.is_nil(o({role='root', token='xx'}))
       assert.is_nil(o({role='root'}))
       assert.is_table(o({role='root', token='e7df7cd2ca07f4f1ab415d457a6e1c13'}))
+
+      local jj = '[{"token":"95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7","role":"root"},' ..
+        '{"token":"46db395df332f18b437d572837d314e421804aaed0f229872ce7d8825d11ff9a","role":"traffer"},' ..
+        '{"token":"60879afb54028243bb82726a5485819a8bbcacd1df738439bfdf06bc3ea628d0","role":"panel"}]'
+      assert.is_table(o + jj)
     end)
     it("remote", function()
       local o = td.def.remote
@@ -88,7 +94,9 @@ describe("definer", function()
       assert.equal(o({}),o({}))
       assert.equal(o({}),o('{}'))
       assert.equal(o({}),o('[]'))
+
       assert.equal(o({{}}),o('[{}]'))
+
       assert.equal(o({{},{}}),o('[{},{}]'))
       assert.equal(o({{},{},{}}),o('[{},{},{}]'))
       assert.equal(o({{},{},{},{}}),o('[{},{},{},{}]'))

@@ -1,3 +1,4 @@
-local t = t or require"t"
-local pkg = ...
-return require("meta").loader(pkg) ^ t.definer
+local t = t or require "t"
+local meta = require "meta"
+local pkg = (...)
+return meta.loader(pkg) ^ t.definer

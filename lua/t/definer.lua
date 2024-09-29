@@ -10,20 +10,21 @@ local _=require "t.storage.mongo"
 local oid=require "t.storage.mongo.oid"
 local cache=meta.cache
 local __storage = cache.storage
-local storage=setmetatable({},{__index=function(_, self)
-return __storage[self][tostring(self)] end })
+local storage=setmetatable({},{__index=function(_, self) return __storage[self][tostring(self)] end })
 local tables=table{'__computed', '__computable', '__imports', '__required', '__id', '__default'}:tohash()
 
 return t.object({
 __add=function(self, it)
+  if is.null(it) then return end
   assert(is.def(self), ("__add: not is.def(self: %s)"):format(type(self)))
   it=self(it)
-  if it then return storage[self] + it end
+  if not is.bulk(it) then return storage[self] + it elseif #it>0 then return storage[self] .. it end
 end,
 __call=function(self, it)
   assert(is.def(self), ("__call: not is.def(self: %s)"):format(type(self)))
   if is.def(it) then return it end
   if type(it)=='string' then
+    if it=='' then return end
     if is.json(it) then it=json.decode(it) else
       local id=self/it
       if id then return id end
@@ -36,7 +37,6 @@ __call=function(self, it)
   assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s'):format(type(getmetatable(it))))
 
   local rv=setmetatable({_={}}, getmetatable(self))
-
   local required=self.__required
   local default =self.__default
   for _,k in pairs(required) do
@@ -50,38 +50,41 @@ __call=function(self, it)
   return toboolean(rv) and rv or nil
 end,
 __concat=function(self, it)
+  assert(not is.null(it), "__add: is null")
   assert(is.def(self), "t.definer.__concat: not is.def(self)")
-  if type(it)=='table' and is.empty(it) then it=nil end
-  if it then it=self(it) end
-  if it then
-    for _,v in pairs(it) do
-      assert(not is.bulk(v))
-    end
-    return storage[self] .. it
-  end
+  if is.empty(it) then return end
+  it=self(it)
+  if not is.bulk(it) then return storage[self] + it elseif #it>0 then return storage[self] .. it end
 end,
 __div=function(self, it)
   assert(is.def(self), "t.definer.__div: not is.defroot(self)")
   if is.defitem(it) then return it/true end
   if is.json(it) then it=json.decode(it) end
-  if type(it)=='nil' then return end
-  if is.bulk(it) and #it>0 then
-    it=t.array(it)
-    local rv=t.array()
-    for _,v in pairs(it) do rv[#rv+1]=self/v end
-    return #rv>0 and rv or nil
+  if is.bulk(it) then
+    it=t.array(it)*function(x) return self/x end
+    return #it>0 and it or nil
   end
   if is.table(it) then return it end
   local ids=table({'_id'}) .. self.__id
   local idn, idx
-  if is.defitem(self) and type(it)=='boolean' and self._ then
-    for _,k in ipairs(ids) do
-      idx=self[k]
-      if idx then idn=k; break end
+  if is.defitem(self) then
+    local y=it=='_id'
+    for v in table.iter(self.__id) do if v==it then y=true end end
+    if y then
+      if type(it)=='string' and self[it] then
+        return {[it]=self[it]}
+      end
+      return
     end
-    if idn and idx and it==false then return idn end
+    if type(it)=='boolean' and self._ then
+      for _,k in ipairs(ids) do
+        idx=self[k]
+        if idx then idn=k; break end
+      end
+      if idn and idx and it==false then return idn end
+    end
   elseif is.defroot(self) and type(it)=='string' then
-    if is.oid(it) then idn,idx='_id',it else
+    if is.oid(it) then idn,idx='_id',oid(it) else
     for _,k in ipairs(self.__id) do
       local item=self.__imports[k]
       if is.callable(item) then
@@ -117,12 +120,16 @@ end,
 __imports={_id=oid},
 __mod=function(self, it)
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
-  it=type(it)=='string' and self/it or nil
-  return (type(it)=='table' or type(it)=='nil') and storage[self]%it or 0
+  it=(type(it)=='string' or type(it)=='boolean') and self/it or it
+  return type(it)=='table' and storage[self]%it or 0
 end,
 __mul=function(self, it)
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
-  it=type(it)=='string' and self/it or nil
+  if type(it)=='nil' then
+    if is.defroot(self) then return -storage[self] end
+    if is.defitem(self) then return -storage[self] end
+  end
+  it=type(it)=='string' and self/it or it
   return (type(it)=='table' or type(it)=='nil') and self(storage[self]*it) or nil
 end,
 __newindex=function(self, key, value)
@@ -155,6 +162,7 @@ __newindex=function(self, key, value)
 end,
 __pairs=function(self) return pairs(self._ or {}) end,
 __sub=function(self, it)
+  if is.null(it) then return end
   assert(is.defroot(self), "__sub: not is.defroot(self)")
   it=self/it
   if it then return storage[self] - it end
@@ -167,11 +175,17 @@ __toboolean=function(self)
   for _,it in pairs(required) do if type(self[it])=='nil' then return false end end
   return true
 end,
+__tonumber=function(self) return tonumber(storage[self]) end,
 __tostring=function(self) return cache.type[self] or cache.type[getmetatable(self)] end,
 __unm=function(self)
   if is.defroot(self) then return -storage[self] end
-  if is.defitem(self) then return storage[self]-self end
+  if is.defitem(self) then return storage[self]-self/true end
 end,
+}):computable({
+  ref=function(self) if is.defitem(self) then
+    local id={ref='$ref',id='$id',db='$db'}
+    return self._id and {[id.id]=(self/'_id'), [id.ref]=self.__def} or nil
+  end end,
 }):postindex(function(self, key)
   if is.mtname(key) then return mt(self)[key] or (tables[key] and {}) end
   if key=='_' then return rawget(self,key) end

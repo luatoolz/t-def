@@ -1,17 +1,19 @@
 describe("objects", function()
-  local t, meta, is, mt, json, oid, td, def, definer, job, auth, remote, simple
+  local t, meta, is, mt, json, oid, ii, def, definer, job, auth, remote, simple, storage, cache, __storage
   setup(function()
     t = t or require "t"
     t.env.MONGO_HOST='127.0.0.1'
     meta = require "meta"
-    is = t.is ^ 'testdata'
+    is = t.is
     mt = meta.mt
-    td = require "testdata"
+    meta.no.errors(true)
+    _ = t.storage.mongo ^ t.def
+    ii = t.storage.mongo.ii
 
     json = t.format.json
     oid = t.storage.mongo.oid
 
-    def = assert(td.def)
+    def = assert(t.def)
     definer = assert(t.definer)
 
     job = assert(def.job)
@@ -22,11 +24,16 @@ describe("objects", function()
     _ = is
     _ = json
     _ = auth
+    _ = ii
 
+    cache=meta.cache
+    __storage = cache.storage
+    storage=setmetatable({},{__index=function(_, self) return __storage[self][tostring(self)] end })
     assert.is_true(-job)
+    meta.log.report=false
   end)
   it("mt", function()
-    assert.equal(definer, meta.module(td.def).link.handler)
+    assert.equal(definer, meta.module(t.def).link.handler)
     assert.is_function(mt(remote).ping)
     assert.is_function(remote.ping)
     assert.def(simple)
@@ -74,11 +81,11 @@ describe("objects", function()
     local id='66909d26cbade70b6b022b9a'
     assert.is_table(def.noneexistent)
     assert.is_nil(def.noneexistent/'any')
-    assert.eq({_id=id}, def.noneexistent/id)
+    assert.eq({_id=oid(id)}, def.noneexistent/id)
     assert.equal("y", def.noneexistent('{"x":"y"}').x)
   end)
   it("__add/__sub/__concat/__mod/__unm", function()
-    assert.is_true(-job)
+    assert.is_true(job*nil)
     assert.is_nil(job + nil)
     assert.is_nil(job + true)
     assert.is_nil(job + false)
@@ -96,6 +103,8 @@ describe("objects", function()
     assert.equal(0, job % {})
 
     assert.is_true(job + {_id='66ef5a258aa5f11c0c094b25', n=1})
+    assert.equal(1, tonumber(storage[job]))
+
     assert.equal(1, job % {})
     assert.is_true(job + {_id='66ef5a258aa5f11c0c094b26', n=2, done=true, message='some', created=0})
     assert.equal(2, job % {})
@@ -110,37 +119,39 @@ describe("objects", function()
 
     assert.is_true(job - '66ef5a258aa5f11c0c094b25')
     assert.equal(4, job % {})
-    assert.is_true(toboolean(job - {'66909d26cbade70b6b022b9a','66ef5a258aa5f11c0c094b26'}))
+    assert.equal('userdata', type((job/{'66909d26cbade70b6b022b9a','66ef5a258aa5f11c0c094b26'})[1]._id))
+    assert.equal(2, (job - {'66909d26cbade70b6b022b9a','66ef5a258aa5f11c0c094b26'}).nRemoved)
+
     assert.equal(2, job % {})
     assert.is_true(job + {_id='66ef5a258aa5f11c0c094b25', n=1})
     assert.equal(3, job % {})
-    assert.is_true(toboolean(job - job({{_id='66ef5a258aa5f11c0c094b27', n=4},{_id='66ef5a258aa5f11c0c094b25', n=1}})))
+    assert.equal(2, (job - job({{_id='66ef5a258aa5f11c0c094b27', n=4},{_id='66ef5a258aa5f11c0c094b25', n=1}})).nRemoved)
     assert.equal(1, job % {})
     assert.is_true(job - job['66ef5a258aa5f11c0c094b28'])
     assert.equal(0, job % {})
-    assert.is_true(-job)
+    assert.is_true(job*nil)
 
     assert.is_true(job + '{"_id":"66ef5a258aa5f11c0c094b25", "n":1}')
     assert.equal(1, job % {})
     assert.is_true(job + job('{"_id":"66ef5a258aa5f11c0c094b26", "n":2}'))
     assert.equal(2, job % {})
-    assert.is_true(-job)
+    assert.is_true(job*nil)
     assert.equal(0, job % {})
-    assert.is_true(toboolean(job + '[{"_id":"66ef5a258aa5f11c0c094b25", "n":1},{"_id":"66ef5a258aa5f11c0c094b26", "n":2}]'))
+    assert.equal(2, (job + '[{"_id":"66ef5a258aa5f11c0c094b25", "n":1},{"_id":"66ef5a258aa5f11c0c094b26", "n":2}]').nInserted)
     assert.equal(2, job % {})
-    assert.is_true(toboolean(job + job('[{"_id":"66ef5a258aa5f11c0c094b27", "n":3},{"_id":"66ef5a258aa5f11c0c094b28", "n":4}]')))
+    assert.equal(2, (job + job('[{"_id":"66ef5a258aa5f11c0c094b27", "n":3},{"_id":"66ef5a258aa5f11c0c094b28", "n":4}]')).nInserted)
     assert.equal(4, job % {})
-    assert.is_true(-job)
+    assert.is_true(job*nil)
 
     assert.is_true(job .. '{"_id":"66ef5a258aa5f11c0c094b25", "n":1}')
     assert.equal(1, job % {})
     assert.is_true(job .. job('{"_id":"66ef5a258aa5f11c0c094b26", "n":2}'))
     assert.equal(2, job % {})
-    assert.is_true(-job)
+    assert.is_true(job*nil)
     assert.equal(0, job % {})
-    assert.is_true(toboolean(job .. '[{"_id":"66ef5a258aa5f11c0c094b25", "n":1},{"_id":"66ef5a258aa5f11c0c094b26", "n":2}]'))
+    assert.equal(2, (job .. '[{"_id":"66ef5a258aa5f11c0c094b25", "n":1},{"_id":"66ef5a258aa5f11c0c094b26", "n":2}]').nInserted)
     assert.equal(2, job % {})
-    assert.is_true(toboolean(job .. job('[{"_id":"66ef5a258aa5f11c0c094b27", "n":3},{"_id":"66ef5a258aa5f11c0c094b28", "n":4}]')))
+    assert.equal(2, (job .. job('[{"_id":"66ef5a258aa5f11c0c094b27", "n":3},{"_id":"66ef5a258aa5f11c0c094b28", "n":4}]')).nInserted)
     assert.equal(4, job % {})
 
     assert.is_true(job - job('{"_id":"66ef5a258aa5f11c0c094b26", "n":2}')/true)
@@ -158,13 +169,14 @@ describe("objects", function()
     assert.equal(job['66ef5a258aa5f11c0c094b27']._id, job({_id='66ef5a258aa5f11c0c094b27', n=3})._id)
     assert.equal(job['66ef5a258aa5f11c0c094b27'], job({_id='66ef5a258aa5f11c0c094b27', n=3}))
 
-    assert.is_true(-job({_id='66ef5a258aa5f11c0c094b27', n=3}))
-    assert.is_true(-job)
+    assert.eq({['$ref']='job',['$id']={_id=oid('66ef5a258aa5f11c0c094b27')}}, job['66ef5a258aa5f11c0c094b27'].ref)
+
+    assert.is_true(job*nil)
     assert.equal(0, job % {})
   end)
   it("__concat", function()
-    assert.is_true(-job)
-    assert.is_nil(job .. nil)
+    assert.is_true(job*nil)
+--    assert.is_nil(job .. nil)
     assert.is_nil(job .. true)
     assert.is_nil(job .. false)
     assert.is_nil(job .. 0)
@@ -174,33 +186,44 @@ describe("objects", function()
     assert.is_nil(job .. ' ')
     assert.is_nil(job .. '1')
     assert.is_nil(job .. 'item')
+
+--    assert.equal('', is.empty(job({''})))
+
     assert.is_nil(job .. {''})
     assert.is_nil(job .. {true})
     assert.is_nil(job .. {false})
     assert.is_nil(job .. {1})
     assert.is_nil(job .. {})
+    assert.equal(0, job % {})
 
-    assert.is_true(toboolean(job .. {{done=true, message='some', created=0}}))
+    assert.equal(1, (job .. {{done=true, message='some', created=0}}).nInserted)
     assert.equal(1, job % {})
 
-    assert.is_true(toboolean(job .. {job({done=true, message='some', created=0})}))
+    assert.equal(1, (job .. {job({done=true, message='some', created=0})}).nInserted)
     assert.equal(2, job % {})
 
-    assert.is_true(toboolean(job .. {{_id='66ef5a258aa5f11c0c094b27', n=3},'{"_id":"66ef5a258aa5f11c0c094b26", "n":2}',
-      {_id='66909d26cbade70b6b022b9a', n=4, done=true, message='some', created=0}}))
-    assert.equal(5, job % {})
-    assert.is_true(-job)
+    local tb = {{_id='66ef5a258aa5f11c0c094b27', n=3},'{"_id":"66ef5a258aa5f11c0c094b26", "n":2}',{_id='66909d26cbade70b6b022b9a', n=4, done=true, message='some', created=0}}
+--    assert.equal('', tb)
+    assert.is_true(is.bulk(tb))
+--    assert.equal('t/array', t.type(tb))
+--    assert.equal('userdata', type(tb[1]._id))
+    assert.equal(3, tonumber(tb))
+    assert.equal(3, (job + tb).nInserted)
+--    assert.is_true(toboolean(job .. tb))
+--    assert.is_true(job .. {{_id='66ef5a258aa5f11c0c094b27', n=3},'{"_id":"66ef5a258aa5f11c0c094b26", "n":2}',{_id='66909d26cbade70b6b022b9a', n=4, done=true, message='some', created=0}})
+
+    assert.equal(5, tonumber(job))
+    assert.is_true(job*nil)
     assert.equal(0, job % {})
   end)
   it("__sub", function()
-    assert.is_true(-job)
+    assert.ok(job*nil)
     assert.is_nil(job - nil)
     assert.is_nil(job - true)
     assert.is_nil(job - false)
     assert.is_nil(job - 0)
     assert.is_nil(job - 1)
     assert.is_nil(job - 2)
-    assert.is_nil(job - '')
     assert.is_nil(job - ' ')
     assert.is_nil(job - '1')
     assert.is_nil(job - 'item')
@@ -208,6 +231,8 @@ describe("objects", function()
     assert.is_nil(job - {true})
     assert.is_nil(job - {false})
     assert.is_nil(job - {1})
+
+    assert.is_nil(job - '')
     assert.equal(0, job % {})
 
     assert.is_true(job + {})
@@ -219,17 +244,19 @@ describe("objects", function()
   end)
   it("__div", function()
     local id='66909d26cbade70b6b022b9a'
-    local token='e7df7cd2ca07f4f1ab415d457a6e1c13'
+    local token='95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7'
 
-    assert.is_table(td.def.auth.__id)
-    assert.eq({_id=id}, td.def.auth/id)
-    assert.eq({token=token}, td.def.auth/token)
+    assert.is_table(t.def.auth.__id)
+    assert.eq({_id=oid(id)}, t.def.auth/id)
+    assert.eq({token=token}, t.def.auth/token)
 
     local o=job({_id=id, done=true, message='some', created=0})
     assert.equal('_id', o/false)
-    assert.eq({_id=oid(id)}, o/true)
+    assert.equal('mongo.ObjectID', t.type(o._id))
+    assert.equal('mongo.ObjectID', t.type((o/true)._id))
+    assert.same({_id=oid(id)}, o/true)
 
-    o=td.def.auth({role='root', token=token})
+    o=t.def.auth({role='root', token=token})
     assert.eq({role='root', token=token}, o)
     assert.is_nil(o._id)
     assert.equal(token, o.token)
