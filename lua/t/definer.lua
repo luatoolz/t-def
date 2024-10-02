@@ -11,7 +11,7 @@ local oid=require "t.storage.mongo.oid"
 local cache=meta.cache
 local __storage = cache.storage
 local storage=setmetatable({},{__index=function(_, self) return __storage[self][tostring(self)] end })
-local tables=table{'__computed', '__computable', '__imports', '__required', '__id', '__default'}:tohash()
+local tables=table{'__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:tohash()
 
 return t.object({
 __add=function(self, it)
@@ -50,7 +50,6 @@ __call=function(self, it)
   return toboolean(rv) and rv or nil
 end,
 __concat=function(self, it)
-  assert(not is.null(it), "__add: is null")
   assert(is.def(self), "t.definer.__concat: not is.def(self)")
   if is.empty(it) then return end
   it=self(it)
@@ -84,6 +83,7 @@ __div=function(self, it)
       if idn and idx and it==false then return idn end
     end
   elseif is.defroot(self) and type(it)=='string' then
+    if self.__filter and self.__filter[it] then return self.__filter[it] end
     if is.oid(it) then idn,idx='_id',oid(it) else
     for _,k in ipairs(self.__id) do
       local item=self.__imports[k]
@@ -127,10 +127,10 @@ __mul=function(self, it)
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
   if type(it)=='nil' then
     if is.defroot(self) then return -storage[self] end
-    if is.defitem(self) then return -storage[self] end
+    if is.defitem(self) then return storage[self]-self end
   end
   it=type(it)=='string' and self/it or it
-  return (type(it)=='table' or type(it)=='nil') and self(storage[self]*it) or nil
+  return (type(it)=='table') and self(t.array(storage[self]*it)) or nil
 end,
 __newindex=function(self, key, value)
   if is.defroot(self) then
@@ -168,12 +168,15 @@ __sub=function(self, it)
   if it then return storage[self] - it end
 end,
 __toboolean=function(self)
-  if not self._ then return false end
-  local required = self.__required
-  if type(required)=='nil' then return true end
-  if type(required)~='table' then return false end
-  for _,it in pairs(required) do if type(self[it])=='nil' then return false end end
-  return true
+  if is.defroot(self) then return true end
+  if is.defitem(self) then
+    if not self._ then return false end
+    local required = self.__required
+    if type(required)=='nil' then return true end
+    if type(required)~='table' then return false end
+    for _,it in pairs(required) do if type(self[it])=='nil' then return false end end
+    return true
+  end
 end,
 __tonumber=function(self) return tonumber(storage[self]) end,
 __tostring=function(self) return cache.type[self] or cache.type[getmetatable(self)] end,
@@ -186,11 +189,17 @@ end,
     local id={ref='$ref',id='$id',db='$db'}
     return self._id and {[id.id]=(self/'_id'), [id.ref]=self.__def} or nil
   end end,
-}):postindex(function(self, key)
+}):preindex(function(self, key)
+  if is.defroot(self) then
+    if key=='' then return self.__ end
+  end
+end):postindex(function(self, key)
   if is.mtname(key) then return mt(self)[key] or (tables[key] and {}) end
   if key=='_' then return rawget(self,key) end
   if is.defroot(self) then
-    if is.table(key) then return self(storage[self]*key) end
+    if self.__action[key] then return self.__action[key or ''] end
+    if self.__filter[key] then key=self/key end
+    if is.table(key) then return self*key end
     local query=self/key
     return query and self(storage[self][query])
   end
