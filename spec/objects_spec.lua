@@ -122,6 +122,7 @@ describe("objects", function()
     assert.is_true(job - '66ef5a258aa5f11c0c094b25')
     assert.equal(4, job % {})
     assert.equal('userdata', type((job/{'66909d26cbade70b6b022b9a','66ef5a258aa5f11c0c094b26'})[1]._id))
+
     assert.equal(2, (job - {'66909d26cbade70b6b022b9a','66ef5a258aa5f11c0c094b26'}).nRemoved)
 
     assert.equal(2, job % {})
@@ -208,10 +209,10 @@ describe("objects", function()
     assert.is_nil(job .. {})
     assert.equal(0, job % {})
 
-    assert.equal(1, (job .. {{done=true, message='some', created=0}}).nInserted)
+    assert.equal(1, (job .. {job({done=true, message='some', created=0})}).nInserted)
     assert.equal(1, job % {})
 
-    assert.equal(1, (job .. {job({done=true, message='some', created=0})}).nInserted)
+    assert.equal(1, (job .. {{done=true, message='some', created=0}}).nInserted)
     assert.equal(2, job % {})
 
     local tb = {{_id='66ef5a258aa5f11c0c094b27', n=3},'{"_id":"66ef5a258aa5f11c0c094b26", "n":2}',{_id='66909d26cbade70b6b022b9a', n=4, done=true, message='some', created=0}}

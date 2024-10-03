@@ -3,7 +3,6 @@ local t = t or require "t"
 local is = t.is
 local mt = meta.mt
 local export = t.exporter
-local getmetatable=debug and debug.getmetatable or getmetatable
 local json=require "t.format.json"
 
 local _=require "t.storage.mongo"
@@ -34,7 +33,8 @@ __call=function(self, it)
   if is.atom(it) or is.imaginary(it) or type(it)=='userdata' then return end
   assert(type(it)=='table', ('t.definer: invalid type: await table, got %s'):format(type(it)))
   if is.bulk(it) then return t.array(it)*self end
-  assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s'):format(type(getmetatable(it))))
+  if mt(it).__jsontype then setmetatable(it, nil) end
+  assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s, t.type=%s'):format(type(getmetatable(it)), t.type(it) ))
 
   local rv=setmetatable({_={}}, getmetatable(self))
   local required=self.__required

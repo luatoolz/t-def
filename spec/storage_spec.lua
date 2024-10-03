@@ -1,15 +1,13 @@
 describe("storage", function()
-  local t, meta, is, job, cache
+  local t, meta, job, cache
   setup(function()
-    t = t or require "t"
+    t = require "t"
     t.env.MONGO_HOST='127.0.0.1'
     meta = require "meta"
-    is = t.is
     _ = t.storage.mongo ^ t.def
     job = assert(t.def.job)
     cache = meta.cache
     storage = cache.storage
-    local _ = is
   end)
   it("cache", function()
     assert.is_function(cache.objnormalize.storage)
