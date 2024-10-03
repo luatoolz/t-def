@@ -4,6 +4,7 @@ describe("definer", function()
     t = require "t"
     is = t.is ^ 'testdata'
     t.env.MONGO_HOST='127.0.0.1'
+    t.env.MONGO_PORT=27015
     td = require "testdata"
     _ = t.storage.mongo ^ td.def
     bson = t.format.bson

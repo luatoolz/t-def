@@ -3,6 +3,7 @@ describe("storage", function()
   setup(function()
     t = require "t"
     t.env.MONGO_HOST='127.0.0.1'
+    t.env.MONGO_PORT=27015
     meta = require "meta"
     _ = t.storage.mongo ^ t.def
     job = assert(t.def.job)
