@@ -22,7 +22,7 @@ describe("definer", function()
       assert.is_nil(o({role='', token='yy'}))
       assert.is_nil(o({role='root', token='xx'}))
       assert.is_nil(o({role='root'}))
-      assert.is_table(o({role='root', token='e7df7cd2ca07f4f1ab415d457a6e1c13'}))
+      assert.is_table(o({role='root', token='95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7'}))
 
       local jj = '[{"token":"95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7","role":"root"},' ..
         '{"token":"46db395df332f18b437d572837d314e421804aaed0f229872ce7d8825d11ff9a","role":"traffer"},' ..

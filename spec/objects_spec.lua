@@ -1,31 +1,21 @@
 describe("objects", function()
-  local t, meta, is, mt, json, oid, ii, def, definer, job, auth, remote, simple, storage, cache, __storage
+  local t, meta, is, mt, oid, td, mongo, job, auth, remote, simple, storage, cache, __storage
   setup(function()
+    meta = require "meta"
     t = t or require "t"
     t.env.MONGO_HOST='127.0.0.1'
     t.env.MONGO_PORT=27015
-    meta = require "meta"
     is = t.is
     mt = meta.mt
-    meta.no.errors(true)
-    _ = t.storage.mongo ^ t.def
-    ii = t.storage.mongo.ii
 
-    json = t.format.json
-    oid = t.storage.mongo.oid
+    td = require "testdata"
+    mongo = (t.storage.mongo ^ t.def) ^ td.def
+    oid = mongo.oid
 
-    def = assert(t.def)
-    definer = assert(t.definer)
-
-    job = assert(def.job)
-    auth = assert(def.auth)
-    remote = assert(def.remote)
-    simple = assert(def.simple)
-
-    _ = is
-    _ = json
-    _ = auth
-    _ = ii
+    job = assert(t.def.job)
+    auth = assert(td.def.auth)
+    remote = assert(td.def.remote)
+    simple = assert(td.def.simple)
 
     cache=meta.cache
     __storage = cache.storage
@@ -34,7 +24,8 @@ describe("objects", function()
     meta.log.report=false
   end)
   it("mt", function()
-    assert.equal(definer, meta.module(t.def).link.handler)
+    assert.equal(t.definer, meta.module(t.def).link.handler)
+
     assert.is_function(mt(remote).ping)
     assert.is_function(remote.ping)
     assert.def(simple)
@@ -81,11 +72,12 @@ describe("objects", function()
     assert.is_table(mt(i))
   end)
   it("noneexistent", function()
+    local o = td.def.noneexistent
     local id='66909d26cbade70b6b022b9a'
-    assert.is_table(def.noneexistent)
-    assert.is_nil(def.noneexistent/'any')
-    assert.eq({_id=oid(id)}, def.noneexistent/id)
-    assert.equal("y", def.noneexistent('{"x":"y"}').x)
+    assert.is_table(o)
+    assert.is_nil(o/'any')
+    assert.eq({_id=oid(id)}, o/id)
+    assert.equal("y", o('{"x":"y"}').x)
   end)
   it("__add/__sub/__concat/__mod/__unm", function()
     assert.is_true(job*nil)
@@ -179,7 +171,7 @@ describe("objects", function()
     assert.equal(0, job % {})
   end)
   it("data", function()
-    local o = assert(def.data)
+    local o = assert(td.def.data)
     assert.equal(0, o % {})
     local item = o({_id='66ef5a258aa5f11c0c094b25', n=1})
     assert.is_true(o + item)
@@ -202,7 +194,6 @@ describe("objects", function()
     assert.is_nil(job .. ' ')
     assert.is_nil(job .. '1')
     assert.is_nil(job .. 'item')
-
     assert.is_nil(job .. {''})
     assert.is_nil(job .. {true})
     assert.is_nil(job .. {false})
@@ -219,7 +210,10 @@ describe("objects", function()
     local tb = {{_id='66ef5a258aa5f11c0c094b27', n=3},'{"_id":"66ef5a258aa5f11c0c094b26", "n":2}',{_id='66909d26cbade70b6b022b9a', n=4, done=true, message='some', created=0}}
     assert.is_true(is.bulk(tb))
     assert.equal(3, tonumber(tb))
-    assert.equal(3, (job + tb).nInserted)
+
+    local add = job + tb
+    assert.equal(3, add.nInserted)
+    assert.equal(3, add.nInserted + add.nUpserted)
     assert.equal(5, tonumber(job))
     assert.is_true(job*nil)
     assert.equal(0, job % {})
@@ -250,25 +244,72 @@ describe("objects", function()
     assert.is_true(job - {})
     assert.equal(0, job % {})
   end)
-  it("__div", function()
-    local id='66909d26cbade70b6b022b9a'
-    local token='95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7'
+  describe("__div", function()
+    describe("auth", function()
+      it("defroot", function()
+        local id='66909d26cbade70b6b022b9a'
+        local token='95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7'
 
-    assert.is_table(t.def.auth.__id)
-    assert.eq({_id=oid(id)}, t.def.auth/id)
-    assert.eq({token=token}, t.def.auth/token)
+        assert.equal(nil, auth/nil)
+        assert.equal(nil, auth/true)
+        assert.equal(nil, auth/false)
+        assert.equal(nil, auth/0)
+        assert.equal(nil, auth/1)
+        assert.equal(nil, auth/2)
+        assert.equal(nil, auth/' ')
+        assert.equal(nil, auth/'1')
+        assert.equal(nil, auth/'item')
+        assert.equal(nil, auth/{''})
+        assert.equal(nil, auth/{true})
+        assert.equal(nil, auth/{false})
+        assert.equal(nil, auth/{1})
+        assert.equal(nil, auth/'')
+        assert.eq({_id=oid(id)}, auth/id)
+        assert.eq({token=token}, auth/token)
+      end)
+      it("defitem", function()
+        local id='66909d26cbade70b6b022b9a'
+        local token='95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7'
+        local item=auth({_id=id, role='root', token=token})
 
-    local o=job({_id=id, done=true, message='some', created=0})
-    assert.equal('_id', o/false)
-    assert.equal('mongo.ObjectID', t.type(o._id))
-    assert.equal('mongo.ObjectID', t.type((o/true)._id))
-    assert.same({_id=oid(id)}, o/true)
+        assert.eq({_id=oid(id)}, item/true)
+        assert.equal('_id', item/false)
+        assert.equal(nil, item/nil)
+        assert.equal(nil, item/0)
+        assert.equal(nil, item/1)
+        assert.equal(nil, item/2)
+        assert.equal(nil, item/' ')
+        assert.equal(nil, item/'1')
+        assert.equal(nil, item/'item')
+        assert.equal(nil, item/{''})
+        assert.equal(nil, item/{1})
+        assert.equal(nil, item/'')
+        assert.equal(nil, item/id)
+        assert.equal(nil, item/token)
+        assert.eq({_id=oid(id)}, item/item)
+        assert.eq({_id=oid(id)}, auth/item)
+      end)
+    end)
+    it("auth object", function()
+      local id='66909d26cbade70b6b022b9a'
+      local token='95687c9a1a88dd2d552438573dd018748dfff0222c76f085515be2dc1db2afa7'
 
-    o=t.def.auth({role='root', token=token})
-    assert.eq({role='root', token=token}, o)
-    assert.is_nil(o._id)
-    assert.equal(token, o.token)
-    assert.eq('token', o/false)
-    assert.eq({token=token}, o/true)
+      assert.is_table(auth.__id)
+      assert.eq({_id=oid(id)}, auth/id)
+      assert.eq({token=token}, auth/token)
+
+      local o=job({_id=id, done=true, message='some', created=0})
+      assert.equal('_id', o/false)
+      assert.equal('mongo.ObjectID', t.type(o._id))
+      assert.equal('mongo.ObjectID', t.type((o/true)._id))
+      assert.same({_id=oid(id)}, o/true)
+
+      o=auth({role='root', token=token})
+      assert.eq({role='root', token=token}, o)
+      assert.is_nil(o._id)
+      assert.equal(token, o.token)
+      assert.eq('token', o/false)
+      assert.eq({token=token}, o/true)
+    end)
   end)
 end)
