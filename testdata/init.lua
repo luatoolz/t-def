@@ -1,1 +1,1 @@
-return (t or require "t").pkg(...) ^ true
+return (t or require "t").pkg(...) ^ 'testdata'

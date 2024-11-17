@@ -1,4 +1,4 @@
-local t = t or require "t"
+local t=t or require "t"
 return {
   yes=true,
   no=false,

@@ -1,4 +1,2 @@
-local meta=require "meta"
-local mt=meta.mt
-local is=meta.is
-return function(x) return type(x)=='table' and type(mt(x).__def)=='string' and is.factory(x) end
+local t=t or require "t"
+return t.cache.getter.defroot

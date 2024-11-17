@@ -1,3 +1,4 @@
 local meta=require "meta"
 local mt=meta.mt
-return function(x) return type(x)=='table' and type(mt(x).__def)=='string' end
+local object=mt.object
+return function(x) return type(x)=='table' and rawequal(mt(x).__index, object) end

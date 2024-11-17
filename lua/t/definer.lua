@@ -2,35 +2,36 @@ local meta = require "meta"
 local t = t or require "t"
 local is = t.is
 local mt = meta.mt
+local to = t.to
 local export = t.exporter
 local json=require "t.format.json"
+local mongo=t.storage.mongo
 
-local _=require "t.storage.mongo"
-local oid=require "t.storage.mongo.oid"
-local cache=meta.cache
-local __storage = cache.storage
-local storage=setmetatable({},{__index=function(_, self) return __storage[self][tostring(self)] end })
-local tables=table{'__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:tohash()
+local oid=mongo.oid
+local storage=mongo.cache
+local tables=table{'__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:hashed()
 
 return t.object({
-__add=function(self, it)
-  if is.null(it) then return end
+__add=function(self, it) if not storage[self] then return end
+  if is.null(it) then return nil end
   assert(is.def(self), ("__add: not is.def(self: %s)"):format(type(self)))
   it=self(it)
-  if not is.bulk(it) then return storage[self] + it elseif #it>0 then return storage[self] .. it end
+  if not is.bulk(it) then return storage[self]+it end
+  if #it>0 then return storage[self]..it end
 end,
 __call=function(self, it)
   assert(is.def(self), ("__call: not is.def(self: %s)"):format(type(self)))
   if is.def(it) then return it end
   if type(it)=='string' then
     if it=='' then return end
-    if is.json(it) then it=json.decode(it) else
+    if is.json(it) then it=json.decode(it)
+ else
       local id=self/it
       if id then return id end
     end
   end
   if is.complex(it) and mt(it).__export then it=export(it) end
-  if is.atom(it) or is.imaginary(it) or type(it)=='userdata' then return end
+  if is.atom(it) or is.virtual(it) or is.userdata(it) then return end
   assert(type(it)=='table', ('t.definer: invalid type: await table, got %s'):format(type(it)))
   if is.bulk(it) then return t.array(it)*self end
   if mt(it).__jsontype then setmetatable(it, nil) end
@@ -47,13 +48,13 @@ __call=function(self, it)
       rv[k]=v
     end
   end
-  return toboolean(rv) and rv or nil
+  return to.boolean(rv) and rv or nil
 end,
-__concat=function(self, it)
+__concat=function(self, it) if not storage[self] then return end
   assert(is.def(self), "t.definer.__concat: not is.def(self)")
   if is.empty(it) then return end
   it=self(it)
-  if not is.bulk(it) then return storage[self] + it elseif #it>0 then return storage[self] .. it end
+  if not is.bulk(it) then return storage[self]+it elseif is.bulk(it) and #it>0 then return storage[self]..it end
 end,
 __div=function(self, it)
   assert(is.def(self), "t.definer.__div: not is.defroot(self)")
@@ -118,12 +119,22 @@ __eq=function(self, it)
   return true
 end,
 __imports={_id=oid},
-__mod=function(self, it)
+__le=function(a, b)
+  assert(type(a)==type(b) and type(a)=='table')
+--  assert(is.similar(a, b), 'require similar objects')
+  for it in table.iter(a) do if not b[it] then return false end end
+  return true
+end,
+__lt=function(a, b)
+--  assert(is.similar(a, b), 'require similar objects')
+  return a <= b and not (b <= a)
+end,
+__mod=function(self, it) if not storage[self] then return end
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
   it=(type(it)=='string' or type(it)=='boolean') and self/it or it
   return type(it)=='table' and storage[self]%it or 0
 end,
-__mul=function(self, it)
+__mul=function(self, it) if not storage[self] then return end
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
   if type(it)=='nil' then
     if is.defroot(self) then return -storage[self] end
@@ -132,7 +143,7 @@ __mul=function(self, it)
   it=type(it)=='string' and self/it or it
   return (type(it)=='table') and self(t.array(storage[self]*it)) or nil
 end,
-__newindex=function(self, key, value)
+__newindex=function(self, key, value) if not storage[self] then return end
   if is.defroot(self) then
     if is.bulk(key) then key=t.array(key) end
     if is.bulk(value) then value=t.array(value) end
@@ -161,11 +172,11 @@ __newindex=function(self, key, value)
   end
 end,
 __pairs=function(self) return pairs(self._ or {}) end,
-__sub=function(self, it)
+__sub=function(self, it) if not storage[self] then return end
   if is.null(it) then return end
   assert(is.defroot(self), "__sub: not is.defroot(self)")
   it=self/it
-  if it then return storage[self] - it end
+  if it and storage[self] then return storage[self] - it end
 end,
 __toboolean=function(self)
   if is.defroot(self) then return true end
@@ -178,9 +189,9 @@ __toboolean=function(self)
     return true
   end
 end,
-__tonumber=function(self) return tonumber(storage[self]) end,
-__tostring=function(self) return cache.type[self] or cache.type[getmetatable(self)] end,
-__unm=function(self)
+__tonumber=function(self) return to.number(storage[self]) end,
+__tostring=function(self) return getmetatable(self).__name or 'DEFINER' end,
+__unm=function(self) if not storage[self] then return end
   if is.defroot(self) then return -storage[self] end
   if is.defitem(self) then return storage[self]-self/true end
 end,
