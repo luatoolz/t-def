@@ -1,4 +1,4 @@
-local t = require "t"
+local t=t or require "t"
 return setmetatable({
   name='',
   typed_name_computed=t.match.mtname,

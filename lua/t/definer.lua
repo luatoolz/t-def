@@ -9,7 +9,7 @@ local mongo=t.storage.mongo
 
 local oid=mongo.oid
 local storage=mongo.cache
-local tables=table{'__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:hashed()
+local tables=table{'__compute', '__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:hashed()
 
 return t.object({
 __add=function(self, it) if not storage[self] then return end
@@ -25,7 +25,7 @@ __call=function(self, it)
   if type(it)=='string' then
     if it=='' then return end
     if is.json(it) then it=json.decode(it)
- else
+  else
       local id=self/it
       if id then return id end
     end
@@ -38,8 +38,8 @@ __call=function(self, it)
   assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s, t.type=%s'):format(type(getmetatable(it)), t.type(it) ))
 
   local rv=setmetatable({_={}}, getmetatable(self))
-  local required=self.__required
-  local default =self.__default
+  local required, default = self.__required, self.__default
+
   for _,k in pairs(required) do
     rv[k]=default[k]
   end
@@ -48,6 +48,7 @@ __call=function(self, it)
       rv[k]=v
     end
   end
+  for _,k in ipairs(self.__compute) do local _ = rv[k] end
   return to.boolean(rv) and rv or nil
 end,
 __concat=function(self, it) if not storage[self] then return end
