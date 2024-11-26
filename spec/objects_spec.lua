@@ -163,7 +163,7 @@ describe("objects", function()
     assert.equal(o['66ef5a258aa5f11c0c094b27']._id, o({_id='66ef5a258aa5f11c0c094b27', n=3})._id)
     assert.equal(o['66ef5a258aa5f11c0c094b27'], o({_id='66ef5a258aa5f11c0c094b27', n=3}))
 
-    assert.eq({['$ref']='job',['$id']={_id=oid('66ef5a258aa5f11c0c094b27')}}, o['66ef5a258aa5f11c0c094b27'].ref)
+    assert.eq({['$ref']='job',['$id']=oid('66ef5a258aa5f11c0c094b27')}, o['66ef5a258aa5f11c0c094b27'].ref)
 
     assert.is_true(o*nil)
     assert.equal(0, o % {})

@@ -198,8 +198,8 @@ __unm=function(self) if not storage[self] then return end
 end,
 }):computable({
   ref=function(self) if is.defitem(self) then
-    local id={ref='$ref',id='$id',db='$db'}
-    return self._id and {[id.id]=(self/'_id'), [id.ref]=self.__def} or nil
+    if not self._id then self._id=oid() end
+    return mongo.ref(mt(self).__def, self._id)
   end end,
 }):preindex(function(self, key)
   if is.defroot(self) then
