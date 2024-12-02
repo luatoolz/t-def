@@ -154,6 +154,7 @@ __newindex=function(self, key, value) if not storage[self] then return end
       if query then st[query]=value end
     end
     if type(key)=='nil' or is.bulk(key) then st[key]=value end
+    if type(value)=='nil' then st[key]=value end
     return
   end
   if is.defitem(self) then
@@ -202,6 +203,7 @@ end,
     return mongo.ref(mt(self).__def, self._id)
   end end,
 }):preindex(function(self, key)
+  if type(key)=='nil' then return nil end
   if is.defroot(self) then
     if key=='' then return self.__ end
   end
