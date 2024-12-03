@@ -11,6 +11,10 @@ local oid=mongo.oid
 local storage=mongo.cache
 local tables=table{'__compute', '__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:hashed()
 
+local unquery, query =
+  mongo.unquery,
+  mongo.query
+
 return t.object({
 __add=function(self, it) if not storage[self] then return end
   if is.null(it) then return nil end
@@ -32,10 +36,22 @@ __call=function(self, it)
   end
   if is.complex(it) and mt(it).__export then it=export(it) end
   if is.atom(it) or is.virtual(it) or is.userdata(it) then return end
-  assert(type(it)=='table', ('t.definer: invalid type: await table, got %s'):format(type(it)))
+  assert(type(it)=='table' or type(it)=='function', ('t.definer: invalid type: await table, got %s'):format(type(it)))
   if is.bulk(it) then return t.array(it)*self end
+  if type(it)=='function' then
+    local rv=t.array()
+    local el
+    repeat el=it()
+      if type(el)~='nil' then
+        el=self(el)
+        if type(el)~='nil' then table.insert(rv, el) end
+        el=true
+      end
+    until type(el)=='nil'
+    return rv
+  end
   if mt(it).__jsontype then setmetatable(it, nil) end
-  assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s, t.type=%s'):format(type(getmetatable(it)), t.type(it) ))
+  assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s, t.type=%s'):format(type(getmetatable(it)), t.type(it) or 'unknown'))
 
   local rv=setmetatable({_={}}, getmetatable(self))
   local required, default = self.__required, self.__default
@@ -121,28 +137,39 @@ __eq=function(self, it)
 end,
 __imports={_id=oid},
 __le=function(a, b)
-  assert(type(a)==type(b) and type(a)=='table')
---  assert(is.similar(a, b), 'require similar objects')
+--  assert(type(a)==type(b) and type(a)=='table')
+  assert(is.similar(a, b), 'require similar objects')
   for it in table.iter(a) do if not b[it] then return false end end
   return true
 end,
 __lt=function(a, b)
---  assert(is.similar(a, b), 'require similar objects')
+  assert(is.similar(a, b), 'require similar objects')
   return a <= b and not (b <= a)
 end,
-__mod=function(self, it) if not storage[self] then return end
+__mod=function(self, args) if not storage[self] then return end
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
+  local it,_,_ = unquery(args)
   it=(type(it)=='string' or type(it)=='boolean') and self/it or it
   return type(it)=='table' and storage[self]%it or 0
 end,
-__mul=function(self, it) if not storage[self] then return end
+__mul=function(self, args) if not storage[self] then return end
   assert(is.def(self), "t.definer.__mod: not is.def(self)")
-  if type(it)=='nil' then
+  if type(args)=='nil' then
     if is.defroot(self) then return -storage[self] end
     if is.defitem(self) then return storage[self]-self end
   end
+  local it,opts,as = unquery(args)
   it=type(it)=='string' and self/it or it
-  return (type(it)=='table') and self(t.array(storage[self]*it)) or nil
+  if type(it)=='table' then
+    local rv = storage[self]*query(it, opts, as)
+    if as then
+--      return table.iter(rv, self)
+      return is.callable(rv)
+        and function() return self(rv()) end
+        or function() return nil end
+    end
+    return self(t.array(rv))
+  end
 end,
 __newindex=function(self, key, value) if not storage[self] then return end
   if is.defroot(self) then
@@ -150,8 +177,8 @@ __newindex=function(self, key, value) if not storage[self] then return end
     if is.bulk(value) then value=t.array(value) end
     local st=storage[self]
     if type(key)=='string' then
-      local query=self/key
-      if query then st[query]=value end
+      local q=self/key
+      if q then st[q]=value end
     end
     if type(key)=='nil' or is.bulk(key) then st[key]=value end
     if type(value)=='nil' then st[key]=value end
@@ -207,15 +234,18 @@ end,
   if is.defroot(self) then
     if key=='' then return self.__ end
   end
-end):postindex(function(self, key)
+end):postindex(function(self, k)
+  local key,options,as=unquery(k)
   if is.mtname(key) then return mt(self)[key] or (tables[key] and {}) end
   if key=='_' then return rawget(self,key) end
   if is.defroot(self) then
-    if self.__action[key] then return self.__action[key or ''] end
-    if self.__filter[key] then key=self/key end
-    if is.table(key) then return self*key end
-    local query=self/key
-    return query and self(storage[self][query])
+    if type(key)=='string' then
+      if self.__action[key] then return self.__action[key or ''] end
+      if self.__filter[key] then key=self/key end
+    end
+    if is.table(key) then return self*query(key, options, as) end
+    local q=self/key
+    return q and self(storage[self][query(q, options, as)])
   end
   if is.defitem(self) then
     if type(key)=='string' and #key>0 and self._ then

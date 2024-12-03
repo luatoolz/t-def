@@ -1,5 +1,5 @@
 describe("definer", function()
-  local t, is, bson, json, oid, td, array
+  local t, is, bson, json, oid, td, array, map
   setup(function()
     t = require "t"
     is = t.is ^ 'testdata'
@@ -11,6 +11,8 @@ describe("definer", function()
     bson = t.format.bson
     json = t.format.json
     oid = require "t.storage.mongo.oid"
+    map = table.map
+    _ = map
   end)
   describe("definer", function()
     assert.callable(json)
