@@ -53,7 +53,7 @@ return setmetatable({
   stat = function(self) if is.defitem(self) then
     local filters = self:filters()
     local stat = {}
-    for _,f in ipairs(filters) do stat[f]=self:count(f) end
+    for f in pairs(filters) do stat[f]=self:count(f) end
     return {
       filters = stat,
       actions = self:actions(),
