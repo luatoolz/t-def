@@ -240,7 +240,7 @@ end):postindex(function(self, k)
   if key=='_' then return rawget(self,key) end
   if is.defroot(self) then
     if type(key)=='string' then
-      if self.__action[key] then return self.__action[key or ''] end
+      if self.__action[key] then return self.__action[key] end
       if self.__filter[key] then key=self/key end
     end
     if is.table(key) then return self*query(key, options, as) end
