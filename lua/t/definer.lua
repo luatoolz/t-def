@@ -231,13 +231,13 @@ end,
   end end,
 }):preindex(function(self, key)
   if type(key)=='nil' then return nil end
+  if is.mtname(key) then return mt(self)[key] or (tables[key] and {}) end
+  if key=='_' then return rawget(self,key) end
   if is.defroot(self) then
     if key=='' then return self.__ end
   end
 end):postindex(function(self, k)
   local key,options,as=unquery(k)
-  if is.mtname(key) then return mt(self)[key] or (tables[key] and {}) end
-  if key=='_' then return rawget(self,key) end
   if is.defroot(self) then
     if type(key)=='string' then
       if self.__action[key] then return self.__action[key] end

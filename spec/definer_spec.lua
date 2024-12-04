@@ -4,8 +4,6 @@ describe("definer", function()
     t = require "t"
     is = t.is ^ 'testdata'
     array = t.array
-    t.env.MONGO_HOST='127.0.0.1'
-    t.env.MONGO_PORT=27015
     td = require "testdata"
     _ = t.storage.mongo ^ td.def
     bson = t.format.bson
@@ -221,13 +219,10 @@ describe("definer", function()
       assert.is_table(o)
       assert.is_callable(o)
       assert.is_table(o.__action)
-      assert.is_callable(o.__action.__)
-      assert.is_callable(o.__)
-      assert.is_callable(o[''])
-      assert.is_nil(o['']())
-      assert.is_nil(o['__']())
-      assert.equal('pong', o[''](o))
-      assert.equal('pong', o['__'](o))
+      assert.is_callable(o.__action.default)
+      assert.is_callable(o.default)
+      assert.is_nil(o[''])
+      assert.equal('pong', o:default(o))
     end)
     it("action", function()
       local o = td.def.action

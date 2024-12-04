@@ -17,6 +17,8 @@ jobs:
       matrix:
         luaVersion: ["5.1", "5.2", "5.3", "luajit", "luajit-openresty"]
     env:
+      MONGO_PORT: 27015
+      MONGO_HOST: 127.0.0.1
       DEV: --dev
       SYSDEPS: libmongoc-dev
       ROCKSPEC: ${{ github.event.repository.name }}-scm-0.rockspec

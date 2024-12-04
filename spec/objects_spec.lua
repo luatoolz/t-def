@@ -3,8 +3,6 @@ describe("objects", function()
   setup(function()
     meta = require "meta"
     t = t or require "t"
-    t.env.MONGO_HOST='127.0.0.1'
-    t.env.MONGO_PORT=27015
     is = t.is
     to = t.to
     mt = meta.mt
