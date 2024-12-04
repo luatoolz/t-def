@@ -3,7 +3,9 @@ describe("def", function()
   setup(function()
     t = require "t"
 		is = t.is
+    _ = t.storage.mongo ^ t.def
     def = t.def.def
+    _ = is
   end)
   it("ok", function()
     assert.is_table(def.__action)
@@ -14,13 +16,13 @@ describe("def", function()
     assert.is_table(defs)
     assert.is_true(#defs>0)
 
-		local d = def({name='def'})
-		assert.equal('def', d.name)
+    local d = def({name='def'})
+    assert.equal('def', d.name)
 
     assert.callable(def.actions)
-		assert.values(t.array({'actions', 'default', 'test', 'list', 'filters'}), d:actions())
-		assert.is_true(is.empty(d:filters()))
-
-		assert.values(t.array({'all', 'empty', 'filled'}), def({name='collection'}):filters())
+    assert.values(t.array({'actions', 'default', 'test', 'list', 'filters', 'collections'}), d:actions())
+    assert.values(t.array({'all'}), d:filters())
+    assert.values(t.array({}), def({name='collection'}):filters())
+    assert.equal(0, t.def.def % {})
   end)
 end)
