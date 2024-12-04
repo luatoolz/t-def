@@ -43,6 +43,9 @@ return setmetatable({
       for k,_ in pairs(t.storage.mongo or {}) do table.insert(rv, k) end
       return rv
     end,
+    args = function(self)
+      return t.nginx.auto.options()
+    end,
   },
 	test=function(self) return 'method' end,
 	actions=function(self) if is.defitem(self) then
