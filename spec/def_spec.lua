@@ -21,6 +21,6 @@ describe("def", function()
 		assert.values(t.array({'actions', 'default', 'test', 'list', 'filters'}), d:actions())
 		assert.is_true(is.empty(d:filters()))
 
-		assert.values(t.array({'panel', 'root', 'traffer'}), def({name='auth'}):filters())
+		assert.values(t.array({'all', 'empty', 'filled'}), def({name='collection'}):filters())
   end)
 end)
