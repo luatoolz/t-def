@@ -1,9 +1,9 @@
 local t=t or require "t"
 return setmetatable({}, {
   __filter = {
-    all = function() end,
-    empty = function() end,
-    filled = function() end,
+    all = {},
+    empty = {empty=1},
+    filled = {empty=0},
   },
   __action = function(self)
     local it,tab,k,v=pairs(t.storage.mongo)

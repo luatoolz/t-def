@@ -46,14 +46,15 @@ return setmetatable({
     return t.array(table.keys(d.__filter))
   end end,
 	count=function(self, filter) if is.defitem(self) then
-	    local d=t.def[self.name]
-	    if not d then return pkg:error('def not found', self.name) end
-      return d % (filter or {})
+    pkg:assert(self.name, 'not def: %s'%self.name)
+	  local d=t.def[self.name]
+    pkg:assert(d and is.defitem(d), 'def not found: %s'%self.name)
+    return d % (filter or {})
   end end,
   stat = function(self) if is.defitem(self) then
     local filters = self:filters()
     local stat = {}
-    for f in pairs(filters) do stat[f]=self:count(f) end
+    for f in iter(filters) do stat[f]=self:count(f) end
     return {
       filters = stat,
       actions = self:actions(),
