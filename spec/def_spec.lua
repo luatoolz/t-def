@@ -20,7 +20,7 @@ describe("def", function()
     assert.equal('def', d.name)
 
     assert.callable(def.actions)
-    assert.values(t.array({'actions', 'default', 'test', 'list', 'filters', 'collections'}), d:actions())
+    assert.values(t.array({'actions', 'default', 'args', 'test', 'list', 'filters', 'collections'}), d:actions())
     assert.values(t.array({'all'}), d:filters())
     assert.values(t.array({}), def({name='collection'}):filters())
     assert.equal(0, t.def.def % {})
