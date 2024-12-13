@@ -12,6 +12,9 @@ describe("def", function()
     assert.callable(def.__action.default)
     assert.callable(def.default)
 
+    assert.is_table(getmetatable(def).__action)
+    assert.callable(getmetatable(def).__action.default)
+
     local defs = table.map(def:list())
     assert.is_table(defs)
     assert.is_true(#defs>0)

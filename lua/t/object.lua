@@ -1,30 +1,38 @@
-local meta = require "meta"
-local t = t or require "t"
-local is = t.is
-local mt = meta.mt
-local to = t.to
-local export = t.exporter
-local json=require "t.format.json"
-local mongo=t.storage.mongo
+local t=t or require "t"
+local pkgn = ...
+local pkg = t.pkg('t.definer')
+local is, mt, to, export, checker, json, mongo, index =
+  t.is, t.mt.mt, t.to,
+  t.exporter,
+  t.checker,
+  t.format.json,
+  t.storage.mongo,
+  pkg.index
 
-local oid=mongo.oid
-local storage=mongo.cache
+local storage, oid, query, unquery =
+  mongo.cache,
+  mongo.oid,
+  mongo.query,
+  mongo.unquery
+
+--[[
+  __compute -- auto compute
+--]]
+
 local tables=table{'__compute', '__computed', '__computable', '__imports', '__required', '__id', '__default', '__action', '__filter'}:hashed()
+local ok = checker({table=true,['function']=true}, type)
+local mtnil = checker({table={getmetatable,type,{['nil']=true}}}, type)
 
-local unquery, query =
-  mongo.unquery,
-  mongo.query
-
-return t.object({
+return setmetatable({},{
 __add=function(self, it) if not storage[self] then return end
   if is.null(it) then return nil end
-  assert(is.def(self), ("__add: not is.def(self: %s)"):format(type(self)))
+  pkgn:assert(is.def(self), '__add', 'not def (%s)' % type(it))
   it=self(it)
   if not is.bulk(it) then return storage[self]+it end
   if #it>0 then return storage[self]..it end
 end,
 __call=function(self, it)
-  assert(is.def(self), ("__call: not is.def(self: %s)"):format(type(self)))
+  pkgn:assert(is.def(self), '__call', 'not def (%s)' % type(it))
   if is.def(it) then return it end
   if type(it)=='string' then
     if it=='' then return end
@@ -36,7 +44,7 @@ __call=function(self, it)
   end
   if is.complex(it) and mt(it).__export then it=export(it) end
   if is.atom(it) or is.virtual(it) or is.userdata(it) then return end
-  assert(type(it)=='table' or type(it)=='function', ('t.definer: invalid type: await table, got %s'):format(type(it)))
+  pkgn:assert(ok[it], 'invalid type: await table, got %s' % type(it))
   if is.bulk(it) then return t.array(it)*self end
   if type(it)=='function' then
     local rv=t.array()
@@ -51,7 +59,8 @@ __call=function(self, it)
     return rv
   end
   if mt(it).__jsontype then setmetatable(it, nil) end
-  assert(type(getmetatable(it))=='nil', ('t.definer: invalid mt type: await nil, got %s, t.type=%s'):format(type(getmetatable(it)), t.type(it) or 'unknown'))
+local inspect = require "inspect"
+  pkgn:assert(mtnil[it], 'invalid mt type: await nil, got %s (%s) (%s)' % {type(getmetatable(it)),type(it)=='table' and getmetatable(it) or 'nil',inspect(it)})
 
   local rv=setmetatable({_={}}, getmetatable(self))
   local required, default = self.__required, self.__default
@@ -68,13 +77,13 @@ __call=function(self, it)
   return to.boolean(rv) and rv or nil
 end,
 __concat=function(self, it) if not storage[self] then return end
-  assert(is.def(self), "t.definer.__concat: not is.def(self)")
+  pkgn:assert(is.def(self), '__concat', 'not def (%s)' % type(it))
   if is.empty(it) then return end
   it=self(it)
   if not is.bulk(it) then return storage[self]+it elseif is.bulk(it) and #it>0 then return storage[self]..it end
 end,
 __div=function(self, it)
-  assert(is.def(self), "t.definer.__div: not is.defroot(self)")
+  pkgn:assert(is.def(self), '__div', 'not def (%s)' % type(it))
   if is.defitem(it) then return it/true end
   if is.json(it) then it=json.decode(it) end
   if is.bulk(it) then
@@ -136,29 +145,29 @@ __eq=function(self, it)
   return true
 end,
 __imports={_id=oid},
+__index=index,
 __le=function(a, b)
---  assert(type(a)==type(b) and type(a)=='table')
-  assert(is.similar(a, b), 'require similar objects')
+  pkgn:assert(is.similar(a, b), 'require similar objects')
   for it in table.iter(a) do if not b[it] then return false end end
   return true
 end,
 __lt=function(a, b)
-  assert(is.similar(a, b), 'require similar objects')
+  pkgn:assert(is.similar(a, b), 'require similar objects')
   return a <= b and not (b <= a)
 end,
 __mod=function(self, args) if not storage[self] then return end
-  assert(is.def(self), "t.definer.__mod: not is.def(self)")
   local it,_,_ = unquery(args)
+  pkgn:assert(is.def(self), '__mod', 'not def (%s)' % type(it))
   it=(type(it)=='string' or type(it)=='boolean') and self/it or it
   return type(it)=='table' and storage[self]%it or 0
 end,
 __mul=function(self, args) if not storage[self] then return end
-  assert(is.def(self), "t.definer.__mod: not is.def(self)")
   if type(args)=='nil' then
     if is.defroot(self) then return -storage[self] end
     if is.defitem(self) then return storage[self]-self end
   end
   local it,opts,as = unquery(args)
+  pkgn:assert(is.def(self), '__mul', 'not def (%s)' % type(it))
   it=type(it)=='string' and self/it or it
   if type(it)=='table' then
     local rv = storage[self]*query(it, opts, as)
@@ -185,7 +194,7 @@ __newindex=function(self, key, value) if not storage[self] then return end
     return
   end
   if is.defitem(self) then
-    assert(self._, '_ not defined')
+    pkgn:assert(self._, '_ not defined')
     local field=self.__imports[key]
     if type(value)=='nil' then
       self._[key]=nil
@@ -203,7 +212,7 @@ end,
 __pairs=function(self) return pairs(self._ or {}) end,
 __sub=function(self, it) if not storage[self] then return end
   if is.null(it) then return end
-  assert(is.defroot(self), "__sub: not is.defroot(self)")
+  pkgn:assert(is.defroot(self), '__sub', 'not def (%s)' % type(it))
   it=self/it
   if it and storage[self] then return storage[self] - it end
 end,
@@ -219,24 +228,26 @@ __toboolean=function(self)
   end
 end,
 __tonumber=function(self) return to.number(storage[self]) end,
-__tostring=function(self) return getmetatable(self).__name or 'DEFINER' end,
+__tostring=function(self) return getmetatable(self).__name or 'object' end,
 __unm=function(self) if not storage[self] then return end
   if is.defroot(self) then return -storage[self] end
   if is.defitem(self) then return storage[self]-self/true end
 end,
-}):computable({
+__computable={
   ref=function(self) if is.defitem(self) then
     if not self._id then self._id=oid() end
     return mongo.ref(mt(self).__def, self._id)
   end end,
-}):preindex(function(self, key)
+},
+__preindex=function(self, key)
   if type(key)=='nil' then return nil end
   if is.mtname(key) then return mt(self)[key] or (tables[key] and {}) end
   if key=='_' then return rawget(self,key) end
   if is.defroot(self) then
     if key=='' then return self.__ end
   end
-end):postindex(function(self, k)
+end,
+__postindex=function(self, k)
   local key,options,as=unquery(k)
   if is.defroot(self) then
     if type(key)=='string' then
@@ -252,4 +263,4 @@ end):postindex(function(self, k)
       return self._[key]
     end
   end
-end):definer()
+end})

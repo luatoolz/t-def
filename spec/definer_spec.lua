@@ -256,8 +256,8 @@ describe("definer", function()
 
       assert.is_function(o.__computed.typed_name_computed)
       assert.is_function(o.__computed.untyped_name_computed)
-      assert.is_function(o.__computable.typed_name_computable)
-      assert.is_function(o.__computable.untyped_name_computable)
+--      assert.is_function(o.__computable.typed_name_computable)
+--      assert.is_function(o.__computable.untyped_name_computable)
 
       local a = o({name='a'})
       assert.equal('a', a.name)

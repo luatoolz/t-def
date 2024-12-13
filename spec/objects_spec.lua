@@ -27,7 +27,7 @@ describe("objects", function()
     local item=simple({yes=true})
     assert.is_table(item)
     assert.def(item)
-    assert.not_factory(item)
+    assert.not_instance(item)
     assert.not_defroot(item)
     assert.defitem(item)
 
