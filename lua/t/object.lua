@@ -59,8 +59,7 @@ __call=function(self, it)
     return rv
   end
   if mt(it).__jsontype then setmetatable(it, nil) end
-local inspect = require "inspect"
-  pkgn:assert(mtnil[it], 'invalid mt type: await nil, got %s (%s) (%s)' % {type(getmetatable(it)),type(it)=='table' and getmetatable(it) or 'nil',inspect(it)})
+  pkgn:assert(mtnil[it], 'invalid mt type: await nil, got', type(getmetatable(it)))
 
   local rv=setmetatable({_={}}, getmetatable(self))
   local required, default = self.__required, self.__default
