@@ -11,7 +11,7 @@ describe("objects", function()
     td = require "testdata"
     mongo = (t.storage.mongo ^ t.def) ^ td.def
     oid = mongo.oid
-    storage=meta.cache.storage
+    storage=meta.mcache.storage
   end)
   it("mt", function()
     local remote, simple = td.def.remote, td.def.simple
@@ -20,7 +20,7 @@ describe("objects", function()
     assert.is_function(mt(remote).ping)
     assert.is_function(remote.ping)
     assert.def(simple)
---    assert.truthy(meta.cache.loaded[simple])
+--    assert.truthy(meta.mcache.loaded[simple])
 --    assert.factory(simple)
     assert.is_function(mt(simple).__imports._id)
 

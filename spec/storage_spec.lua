@@ -1,5 +1,5 @@
 describe("storage", function()
-  local t, meta, job, cache, td
+  local t, meta, job, mcache, td
   setup(function()
     t = require "t"
     meta = require "meta"
@@ -7,11 +7,11 @@ describe("storage", function()
     _ = t.is ^ 'testdata'
     _ = t.storage.mongo ^ td.def
     job = assert(td.def.job)
-    cache = meta.cache
+    mcache = meta.mcache
     storage = t.storage.mongo.cache
   end)
-  it("cache", function()
-    assert.is_function(cache.put.storage)
+  it("mcache", function()
+    assert.is_function(mcache.put.storage)
     assert.equal(t.storage.mongo, storage[td.def])
     assert.equal(t.storage.mongo, storage[td.def])
     assert.truthy(storage[job])
