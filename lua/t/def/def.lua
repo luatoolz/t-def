@@ -1,9 +1,10 @@
-local t=t or require "t"
+local t=require "t"
 local pkg=...
 local is=t.is
 local iter=table.iter
+local mongo=t.storage.mongo
 return setmetatable({
-  name='[A-Za-z%d%/%._-]+$',
+  name='[%w%/%._-]+$',
 }, {
   __id={'name'},
   __required={'name'},
@@ -40,7 +41,7 @@ return setmetatable({
     end,
     collections = function(self)
       local rv={}
-      for k,_ in pairs(t.storage.mongo or {}) do table.insert(rv, k) end
+      if mongo then for k,_ in pairs(mongo) do table.insert(rv, k) end end
       return rv
     end,
     args = function(self)
@@ -50,13 +51,11 @@ return setmetatable({
 	test=function(self) return 'method' end,
 	actions=function(self) if is.defitem(self) then
 	    local d=t.def[self.name]
-	    if not d then return pkg:error('def not found', self.name) end
-      return setmetatable(t.array(table.keys(d.__action)),nil)
+      return d and setmetatable(t.array(table.keys(d.__action)),nil)
   end end,
   filters=function(self) if is.defitem(self) then
     local d=t.def[self.name]
-    if not d then return pkg:error('def not found', self.name) end
-    return setmetatable(t.array(table.keys(d.__filter)),nil)
+    return d and setmetatable(t.array(table.keys(d.__filter)),nil)
   end end,
 	count=function(self, filter) if is.defitem(self) then
     pkg:assert(type(filter)=='string' or not filter, 'wrong filter: %s' % type(filter))
