@@ -167,7 +167,7 @@ describe("definer", function()
       local first = o.first
       assert.ofarray(first)
       assert.equal(1, #first)
-      assert.equal('testdata/def filtered', t.type(first[1]))
+      assert.equal('def/filtered', t.type(first[1]))
       assert.equal(1, (first[1] or {}).stage)
 
       assert.is_true(o + {stage=2})
