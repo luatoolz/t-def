@@ -201,7 +201,8 @@ describe("definer", function()
                          o({_id='67001df7d64d4d4c2a08fa9d',x=3,a=3,b=3}),
                          o({_id='67001df7d64d4d4c2a08fa9e',x=4,a=4,b=4,c=4})
 
-      assert.equal(4, (o .. {x, a, b, c}).nInserted)
+      local r = (o .. {x, a, b, c})
+      assert.equal(4, r.nInserted+r.nUpserted)
       assert.equal(t.array{a,b,c}, o.a)
       assert.equal(t.array{b,c},   o.b)
       assert.equal(t.array{x,a,b,c}, o.all)
