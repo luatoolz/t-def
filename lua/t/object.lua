@@ -204,7 +204,9 @@ __newindex=function(self, key, value) if not storage[self] then return end
       else
         new_value=value
       end
-      self._[key]=new_value
+      if (not(type(new_value)=='table' and (not getmetatable(new_value)) and type(next(new_value))=='nil')) and (not(is.bulk(new_value) and #new_value==0 and type(next(new_value))=='nil')) then
+        self._[key] = new_value
+      end
     end
   end
 end,
