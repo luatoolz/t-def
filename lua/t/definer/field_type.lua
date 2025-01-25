@@ -15,6 +15,6 @@ return function(v)
       return t.number, v
     end
   elseif is.callable(v) then
-    return v, v
+    return v
   end
 end
