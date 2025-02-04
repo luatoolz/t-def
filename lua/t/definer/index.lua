@@ -1,7 +1,7 @@
 local t=t or require "t"
 local pkg = t.pkg(...)
-local call, computable, tables, save, sub =
-  pkg.call,
+local call = require 'meta.call'
+local computable, tables, save, sub =
   pkg.computable,
   pkg.tables,
   table.save,

@@ -1,5 +1,6 @@
-local call = require "t.definer.call"
-return function(self, t, key)
-  if type(t)=='nil' or (type(t)=='table' and not next(t)) or type(key)=='nil' then return nil end
-  return call(rawget(t, key), self)
+local t = t or require 't'
+local call = t.call
+return function(self, o, key)
+  if type(o)=='nil' or (type(o)=='table' and not next(o)) or type(key)=='nil' then return nil end
+  return call(rawget(o, key), self)
   end
